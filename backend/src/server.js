@@ -1,11 +1,13 @@
 import "dotenv/config";
 import express from "express";
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
 
 import connectDB from "./lib/db.js";
 import redis from "./lib/redis.js";
+import authRoutes from "./routes/auth.route.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -19,10 +21,12 @@ export const io = new Server(httpServer, {
 
 app.use(cors({ origin: process.env.CLIENT_URL }));
 app.use(express.json());
-
+app.use(cookieParser());
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
+
+app.use("/api/auth", authRoutes);
 
 io.on("connection", (socket) => {
   console.log(`Socket connected: ${socket.id}`);
