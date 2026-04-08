@@ -1,19 +1,52 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { createServer } from "http";
+import { Server } from "socket.io";
+
 import connectDB from "./lib/db.js";
+import redis from "./lib/redis.js";
 
 const app = express();
-const PORT = process.env.PORT || 4000;
-app.use(express.json());
+const httpServer = createServer(app);
+
+export const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CLIENT_URL,
+    methods: ["GET", "POST"],
+  },
+});
+
 app.use(cors({ origin: process.env.CLIENT_URL }));
+app.use(express.json());
 
-app.get("health", (req, res, next) => {
-  res.status(200).json({ message: "Server is healthy" });
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
 });
 
-connectDB();
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+io.on("connection", (socket) => {
+  console.log(`Socket connected: ${socket.id}`);
+  socket.on("disconnect", () => {
+    console.log(`Socket disconnected: ${socket.id}`);
+  });
 });
+
+const PORT = process.env.PORT || 4000;
+
+async function start() {
+  await connectDB();
+  try {
+    await redis.ping();
+    console.log("Redis ping OK sahi chal rha hai");
+  } catch (err) {
+    console.log(
+      "Redis not available, continuing without it, check docker connection",
+    );
+  }
+
+  httpServer.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+start();
