@@ -4,8 +4,11 @@ export const ApplyAIState = Annotation.Root({
   // ── inputs
   userId: Annotation({ reducer: (_, next) => next }),
   applicationId: Annotation({ reducer: (_, next) => next }),
+
+  // ── raw inputs
   jdRaw: Annotation({ reducer: (_, next) => next, default: () => "" }),
 
+  //profile of the user built from resume or scraping
   userProfile: Annotation({
     reducer: (_, next) => next,
     default: () => ({
