@@ -1,91 +1,127 @@
+function normalize(text) {
+  return text.toLowerCase().trim();
+}
+
+function isSkillMatch(skill, presentSet) {
+  const sl = normalize(skill);
+
+  return Array.from(presentSet).some((k) => {
+    const pk = normalize(k);
+
+    // exact
+    if (pk === sl) return true;
+
+    // word-level match
+    const words = sl.split(" ");
+    if (words.length > 1) {
+      return words.every((w) => pk.includes(w));
+    }
+
+    // partial (safe)
+    return pk.includes(sl) || sl.includes(pk);
+  });
+}
+
 export async function gapAnalyzerNode(state) {
   console.log("[gap_analyzer] starting...");
 
   try {
+    //hamare inputs
     const requiredSkills = state.jdAnalysis.requiredSkills || [];
     const niceToHave = state.jdAnalysis.niceToHave || [];
-
     const presentKeywords = state.presentKeywords || [];
     const missingKeywords = state.missingKeywords || [];
-
     const fitDetails = state.fitDetails || {};
+    //inputs ends
 
-    const presentSet = new Set(presentKeywords.map((k) => k.toLowerCase()));
+    const presentSet = new Set(presentKeywords.map((k) => normalize(k))); // k yaha par text hai
 
     const gapAnalysis = [];
 
-    // REQUIRED SKILLS
+    // REQUIRED
     for (const skill of requiredSkills) {
-      const sl = skill.toLowerCase();
+      const present = isSkillMatch(skill, presentSet);
 
-      const present = Array.from(presentSet).some(
-        (k) => k.includes(sl) || sl.includes(k),
-      );
+      let severity = "none";
+
+      if (!present) {
+        severity = "high";
+
+        // semantic adjustment
+        if (fitDetails.skillsSim > 0.7) {
+          severity = "medium"; // semantic says you're close
+        }
+      }
 
       gapAnalysis.push({
         skill,
         present,
-        severity: present ? "none" : "high",
+        severity,
         type: "required",
       });
     }
 
-    // NICE TO HAVE
+    //
     for (const skill of niceToHave) {
-      const sl = skill.toLowerCase();
+      const present = isSkillMatch(skill, presentSet);
 
-      const present = Array.from(presentSet).some(
-        (k) => k.includes(sl) || sl.includes(k),
-      );
+      let severity = "none";
+
+      if (!present) {
+        severity = "low";
+
+        if (fitDetails.skillsSim < 0.5) {
+          severity = "medium"; // weak overall → optional matters more
+        }
+      }
 
       gapAnalysis.push({
         skill,
         present,
-        severity: present ? "none" : "medium",
+        severity,
         type: "optional",
       });
     }
 
-    // PRIORITY ORDER
-    const highPriority = missingKeywords.filter((k) => k.priority === "high");
+    // ---------- PRIORITY ----------
+    const tailorPriority = [
+      ...gapAnalysis
+        .filter((g) => !g.present && g.type === "required") //filtering kar raha hai jo skill required but present nhi hai
+        .map((g) => g.skill), // converting object to string inside a array like:["Docker"]
 
-    const mediumPriority = missingKeywords.filter(
-      (k) => k.priority === "medium",
-    );
+      ...missingKeywords.map((k) => k.keyword || k),
+    ];
 
-    const tailorPriority = [...highPriority, ...mediumPriority];
-
-    // GAP INSIGHTS
+    // ---------- INSIGHTS ----------
     const gapInsights = [];
 
-    if (fitDetails.skillsSim !== undefined) {
-      if (fitDetails.skillsSim < 0.5) {
-        gapInsights.push("Weak alignment in core skills");
-      } else if (fitDetails.skillsSim > 0.75) {
-        gapInsights.push("Strong core skill alignment");
-      }
+    if (fitDetails.skillsSim < 0.5) {
+      gapInsights.push("Weak alignment in core skills");
+    } else if (fitDetails.skillsSim > 0.75) {
+      gapInsights.push("Strong core skill alignment");
     }
 
-    if (fitDetails.expSim !== undefined && fitDetails.expSim < 0.5) {
+    if (fitDetails.expSim < 0.5) {
       gapInsights.push("Experience does not strongly match job requirements");
     }
 
-    if (fitDetails.projSim !== undefined && fitDetails.projSim < 0.5) {
+    if (fitDetails.projSim < 0.5) {
       gapInsights.push("Projects are not strongly aligned with the role");
     }
 
-    if (missingKeywords.length > 0) {
-      const criticalMissing = highPriority.slice(0, 3).map((k) => k.keyword);
+    const criticalMissing = gapAnalysis
+      .filter((g) => !g.present && g.severity === "high")
+      .slice(0, 3)
+      .map((g) => g.skill);
 
-      if (criticalMissing.length > 0) {
-        gapInsights.push(
-          `Missing critical skills: ${criticalMissing.join(", ")}`,
-        );
-      }
+    if (criticalMissing.length > 0) {
+      gapInsights.push(
+        `Missing critical skills: ${criticalMissing.join(", ")}`,
+      );
     }
 
-    if (presentKeywords.length > 0) {
-      const strongAreas = presentKeywords.slice(0, 3);
+    const strongAreas = presentKeywords.slice(0, 3);
+    if (strongAreas.length > 0) {
       gapInsights.push(`Strong areas include: ${strongAreas.join(", ")}`);
     }
 

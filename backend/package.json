@@ -20,6 +20,7 @@
     "@langchain/core": "^1.1.39",
     "@langchain/google-genai": "^2.1.26",
     "@langchain/langgraph": "^1.2.8",
+    "@langchain/langgraph-checkpoint-redis": "^1.0.4",
     "@langchain/openai": "^1.4.3",
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.73.1",
