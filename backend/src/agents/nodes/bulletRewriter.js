@@ -56,9 +56,10 @@ export async function bulletRewriterNode(state) {
 
   //  PRIORITY KEYWORDS (ATS + GAP ANALYZER)
   const atsKeywords = (state.missingKeywords || [])
-    .slice()
+    .slice() //copy array exactly so that original remain untouched and logic doesnt breaks
     .sort(sortByPriority)
     .map(normalizeKeyword);
+  //sortPriority and and normalizeKeywords are functions
 
   const gapPriority = (state.tailorPriority || []).map(normalizeKeyword);
 
