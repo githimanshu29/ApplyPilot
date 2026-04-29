@@ -1,84 +1,80 @@
-function isKeywordPresent(keyword, text) {
-  if (text.includes(keyword)) return true;
+function normalize(text) {
+  return text.toLowerCase().trim();
+}
 
-  const words = keyword.split(" ");
+function isKeywordPresent(keyword, text) {
+  const kw = normalize(keyword);
+
+  // exact substring
+  if (text.includes(kw)) return true;
+
+  const words = kw.split(" ");
   if (words.length > 1) {
     return words.every((w) => text.includes(w));
   }
 
-  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`\\b${escaped}s?\\b`, "i").test(text);
 }
 
 export async function atsValidatorNode(state) {
   console.log("[ats_validator] starting...");
 
-  const mustHave = state.jdAnalysis.atsKeywords?.mustHave || [];
-  const goodToHave = state.jdAnalysis.atsKeywords?.goodToHave || [];
+  const resumeVersion = state.resumeVersion || {};
 
-  const { tailoredBullets, updatedSkills, injectedKeywords, summary } =
-    state.resumeVersion;
+  // Unified keyword source (aligned with pipeline)
+  const gapPriority = (state.tailorPriority || []).map((k) =>
+    typeof k === "string" ? k : k.keyword,
+  );
 
+  const atsMissing = (state.missingKeywords || []).map((k) =>
+    typeof k === "string" ? k : k.keyword,
+  );
+
+  const keywordsToCheck = [...new Set([...gapPriority, ...atsMissing])]; // to avoid duplication
+
+  // Resume text
   const tailoredText = [
-    summary || "",
-    (updatedSkills || []).join(" "),
-    (injectedKeywords || []).join(" "),
-    (tailoredBullets || []).join(" "),
-    state.userProfile.resumeRaw || "",
+    resumeVersion.summary || "",
+    (resumeVersion.updatedSkills || []).join(" "),
+    (resumeVersion.tailoredBullets || []).join(" "),
+    state.userProfile?.resumeRaw || "",
   ]
     .join(" ")
-    .toLowerCase();
+    .toLowerCase(); // by join converted to string and lowerCase also
 
   const present = [];
   const missing = [];
 
-  // -------- MUST HAVE --------
-  for (const keyword of mustHave) {
+  // 🔍 Keyword validation
+  for (const keyword of keywordsToCheck) {
     const kw = keyword.toLowerCase();
 
     if (isKeywordPresent(kw, tailoredText)) {
       present.push(keyword);
     } else {
-      missing.push({ keyword, priority: "high" });
+      missing.push({
+        keyword,
+        priority: gapPriority.includes(keyword) ? "high" : "medium",
+      });
     }
   }
 
-  // -------- GOOD TO HAVE --------
-  for (const keyword of goodToHave) {
-    const kw = keyword.toLowerCase();
+  //  Score calculation
+  const total = keywordsToCheck.length || 1;
+  const coverage = present.length / total;
 
-    if (isKeywordPresent(kw, tailoredText)) {
-      present.push(keyword);
-    } else {
-      missing.push({ keyword, priority: "medium" });
-    }
-  }
-
-  // -------- WEIGHTED SCORE --------
-  const mustScore =
-    mustHave.length === 0
-      ? 1
-      : present.filter((k) => mustHave.includes(k)).length / mustHave.length;
-
-  const goodScore =
-    goodToHave.length === 0
-      ? 0
-      : present.filter((k) => goodToHave.includes(k)).length /
-        goodToHave.length;
-
-  const atsScore = Math.round((0.7 * mustScore + 0.3 * goodScore) * 100);
+  const atsScore = Math.round(coverage * 100);
 
   const retryCount = (state.atsRetryCount || 0) + 1;
 
   console.log(
-    `[ats_validator] score: ${atsScore} (must: ${mustScore.toFixed(
-      2,
-    )}, good: ${goodScore.toFixed(2)}) — retry #${retryCount}`,
+    `[ats_validator] score: ${atsScore}% — ${present.length}/${total} keywords matched — retry #${retryCount}`,
   );
 
   return {
     resumeVersion: {
-      ...state.resumeVersion,
+      ...resumeVersion,
       atsScore,
     },
     missingKeywords: missing,
@@ -88,7 +84,7 @@ export async function atsValidatorNode(state) {
 }
 
 export function shouldContinueAfterValidation(state) {
-  const { atsScore } = state.resumeVersion;
+  const atsScore = state.resumeVersion?.atsScore ?? 0;
   const retryCount = state.atsRetryCount || 0;
 
   if (atsScore >= 80 || retryCount >= 4) {
