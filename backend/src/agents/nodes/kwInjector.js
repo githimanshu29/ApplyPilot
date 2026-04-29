@@ -1,4 +1,5 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { ChatGroq } from "@langchain/groq";
 import { z } from "zod";
 
 const InjectionSchema = z.object({
@@ -7,10 +8,16 @@ const InjectionSchema = z.object({
   summary: z.string(),
 });
 
-const llm = new ChatGoogleGenerativeAI({
-  model: "gemini-2.0-flash",
-  temperature: 0.2,
-  apiKey: process.env.GEMINI_API_KEY,
+// const llm = new ChatGoogleGenerativeAI({
+//   model: "gemini-2.0-flash",
+//   temperature: 0.2,
+//   apiKey: process.env.GEMINI_API_KEY,
+// });
+
+const llm = new ChatGroq({
+  model: "llama-3.1-8b-instant",
+  temperature: 0,
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 const structuredLLM = llm.withStructuredOutput(InjectionSchema, {
@@ -57,30 +64,61 @@ export async function kwInjectorNode(state) {
       ? `Previous attempt did not improve ATS score enough. Increase keyword coverage and improve clarity without overstuffing.`
       : "";
 
-  const prompt = `You are optimizing a resume for ATS screening.
+  const prompt = `You are an expert resume optimizer focused on ATS (Applicant Tracking System) performance.
 
-Role: ${jobTitle} at ${company}
+Your goal is to improve the candidate's SKILLS section and generate a strong PROFESSIONAL SUMMARY while keeping the resume truthful and realistic.
 
-Current skills:
+────────────────────────────
+ROLE CONTEXT
+────────────────────────────
+Target Role: ${jobTitle} at ${company}
+
+Current Skills:
 ${currentSkills.join(", ")}
 
-Keywords to include:
+Keywords to Include (priority):
 ${keywordsToInject.join(", ")}
 
-Focus areas:
+Focus Areas:
 ${gapInsights.join(", ") || "general improvement"}
 
-Rules:
-1. Update the skills section by naturally including missing keywords
-2. Group skills logically (Backend, DevOps, Tools, etc.)
-3. Only include realistic skills — do NOT invent experience
-4. Avoid keyword stuffing — keep it clean and human-readable
-5. Ensure strong coverage of critical keywords
-6. Generate a concise 2–3 line professional summary aligned with the role
+────────────────────────────
+INSTRUCTIONS
+────────────────────────────
+1. Update the SKILLS section:
+   - Naturally include the provided keywords where appropriate
+   - Do NOT blindly add all keywords if unrealistic
+   - Merge with existing skills intelligently
+   - Group skills into logical categories (e.g., Backend, DevOps, Databases, Tools)
+
+2. Maintain authenticity:
+   - Do NOT invent tools, technologies, or experience
+   - Only include skills that are realistically aligned with the candidate profile
+
+3. Avoid keyword stuffing:
+   - Keep the skills section clean, readable, and professional
+   - Prefer quality over quantity
+
+4. Generate a PROFESSIONAL SUMMARY:
+   - 2–3 concise lines
+   - Tailored to the target role
+   - Highlight strengths, technologies, and impact
+   - ATS-friendly but human-readable
+
+5. Prioritize high-impact keywords:
+   - Ensure strong coverage of critical (high-priority) keywords
+   - Maintain natural language flow
 
 ${retryNote}
 
-Return structured output only.`;
+────────────────────────────
+CRITICAL OUTPUT RULES
+────────────────────────────
+Return ONLY valid JSON that strictly matches the required schema.
+Do NOT include explanations, markdown, or extra text.
+Do NOT wrap the JSON in code blocks.
+Ensure all fields are present and correctly formatted.
+`;
 
   try {
     const result = await structuredLLM.invoke(prompt);

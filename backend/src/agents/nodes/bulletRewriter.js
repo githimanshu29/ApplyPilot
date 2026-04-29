@@ -1,4 +1,5 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { ChatGroq } from "@langchain/groq";
 import { z } from "zod";
 
 const BulletSchema = z.object({
@@ -12,10 +13,16 @@ const BulletSchema = z.object({
   ),
 });
 
-const llm = new ChatGoogleGenerativeAI({
-  model: "gemini-2.0-flash-lite",
-  temperature: 0.3,
-  apiKey: process.env.GEMINI_API_KEY,
+// const llm = new ChatGoogleGenerativeAI({
+//   model: "gemini-2.0-flash-lite",
+//   temperature: 0.3,
+//   apiKey: process.env.GEMINI_API_KEY,
+// });
+
+const llm = new ChatGroq({
+  model: "llama-3.1-8b-instant",
+  temperature: 0,
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 const structuredLLM = llm.withStructuredOutput(BulletSchema, {
@@ -78,30 +85,66 @@ export async function bulletRewriterNode(state) {
       ? `Previous attempt had low quality. Improve clarity, impact, and better integrate missing keywords. Avoid repeating weak phrasing.`
       : "";
 
-  const prompt = `You are a professional resume writer.
+  const prompt = `You are an expert resume writer specializing in ATS-optimized bullet points.
 
-Role: ${jobTitle} at ${company}
+Your task is to rewrite the candidate's resume bullets to improve clarity, impact, and keyword alignment for the target role.
 
-Required skills: ${requiredSkills.join(", ")}
-Important keywords to include: ${importantKeywords.join(", ")}
-Focus areas: ${gapInsights.join(", ") || "general improvement"}
+────────────────────────────
+ROLE CONTEXT
+────────────────────────────
+Target Role: ${jobTitle} at ${company}
 
-Candidate skills: ${(state.userProfile?.skills || []).join(", ")}
+Required Skills:
+${requiredSkills.join(", ")}
 
-Rules:
-1. Start with strong varied action verbs
-2. Use STAR format (action + method + impact)
-3. Naturally integrate important keywords (no stuffing)
-4. Improve clarity, specificity, and measurable impact
-5. Add realistic quantification if missing
-6. Do NOT invent experience
-7. Keep each bullet concise (1–2 lines)
-8. Avoid repetition across bullets
+High-Priority Keywords:
+${importantKeywords.join(", ")}
+
+Focus Areas:
+${gapInsights.join(", ") || "general improvement"}
+
+Candidate Skills:
+${(state.userProfile?.skills || []).join(", ")}
+
+────────────────────────────
+REWRITING INSTRUCTIONS
+────────────────────────────
+For EACH bullet point:
+
+1. Use a strong, varied action verb at the beginning
+2. Follow STAR format:
+   - Action (what was done)
+   - Method (how it was done: tools/techniques)
+   - Impact (result, outcome, or purpose)
+3. Naturally incorporate relevant keywords where appropriate
+4. Improve clarity and specificity
+5. Add realistic quantification if missing (%, scale, performance, users, etc.)
+6. Keep it truthful — do NOT invent experience
+7. Keep each bullet concise (1–2 lines max)
+8. Ensure diversity — avoid repeating phrasing or structure across bullets
+
+────────────────────────────
+QUALITY EXPECTATIONS
+────────────────────────────
+- Output should sound professional and impactful
+- Avoid vague phrases like "worked on" or "helped with"
+- Prefer strong verbs like "Developed", "Engineered", "Optimized", "Designed"
+- Maintain readability while improving ATS alignment
 
 ${retryNote}
 
-Bullets to rewrite:
+────────────────────────────
+INPUT BULLETS
+────────────────────────────
 ${currentBullets.map((b, i) => `${i + 1}. ${b}`).join("\n")}
+
+────────────────────────────
+CRITICAL OUTPUT RULES
+────────────────────────────
+Return ONLY valid JSON that strictly matches the required schema.
+Do NOT include explanations, markdown, or extra text.
+Do NOT wrap the JSON in code blocks.
+Ensure each bullet has: original, rewritten, qualityScore, reasoning.
 `;
 
   try {

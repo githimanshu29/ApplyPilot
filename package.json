@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@langchain/groq": "^1.2.0"
+  }
+}

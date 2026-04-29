@@ -1,4 +1,5 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { ChatGroq } from "@langchain/groq";
 import { z } from "zod";
 
 const JDSchema = z.object({
@@ -63,10 +64,16 @@ const JDSchema = z.object({
   workType: z.enum(["remote", "hybrid", "onsite"]).optional(),
 });
 
-const llm = new ChatGoogleGenerativeAI({
-  model: "gemini-2.5-flash-lite",
+// const llm = new ChatGoogleGenerativeAI({
+//   model: "gemini-2.5-flash-lite",
+//   temperature: 0,
+//   apiKey: process.env.GEMINI_API_KEY,
+// });
+
+const llm = new ChatGroq({
+  model: "llama-3.1-8b-instant",
   temperature: 0,
-  apiKey: process.env.GEMINI_API_KEY,
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 const structuredLLM = llm.withStructuredOutput(JDSchema, {
@@ -76,12 +83,50 @@ const structuredLLM = llm.withStructuredOutput(JDSchema, {
 export async function jdParserNode(state) {
   console.log("[jd_parser] starting...");
 
-  const prompt = `You are analyzing a job description for a candidate applying to a role. Extract structured information precisely and objectively from the JD. The role can belong to ANY domain (engineering, finance, consulting, marketing, operations, etc.), so do not assume it is a software role. Identify the correct domain based on the job description. For atsKeywords: Think like an ATS (Applicant Tracking System). Extract exact keywords and phrases that an ATS would scan for. Include: - Core skills (technical or domain-specific) - Tools, software, platforms (e.g., Excel, AWS, Tally, React, SAP) - Methodologies (e.g., Agile, auditing standards, financial modeling) - Domain-specific terminology (e.g., taxation, REST APIs, risk analysis) - Relevant soft skills (e.g., communication, stakeholder management) Rules: - Be exhaustive but precise (15–25 keywords total) - Prefer exact phrases from the JD when possible - Do NOT invent skills or tools not mentioned or clearly implied - Avoid duplicates or overly generic terms For roleDomain: Classify the role based on responsibilities and required skills, not just the title. For responsibilities: Extract clear, action-oriented statements describing what the candidate will do. For requiredSkills vs niceToHave: Separate strictly required qualifications from optional or preferred ones. Return clean, structured output following the schema.
+  const prompt = `You are analyzing a job description for a candidate applying to a role.
 
-Job Description:
----
+Your task is to extract structured information precisely and objectively.
+
+The role can belong to ANY domain (engineering, finance, consulting, marketing, operations, etc.). Do NOT assume it is a software role. Identify the correct domain based on the job description.
+
+────────────────────────────
+ATS KEYWORD EXTRACTION
+────────────────────────────
+Think like an ATS (Applicant Tracking System). Extract exact keywords and phrases that an ATS would scan for.
+
+Include:
+- Core skills (technical or domain-specific)
+- Tools, software, platforms (e.g., Excel, AWS, Tally, React, SAP)
+- Methodologies (e.g., Agile, auditing standards, financial modeling)
+- Domain-specific terminology (e.g., taxation, REST APIs, risk analysis)
+- Relevant soft skills (e.g., communication, stakeholder management)
+
+Rules:
+- Be exhaustive but precise (15–25 keywords total)
+- Prefer exact phrases from the JD when possible
+- Do NOT invent skills or tools not mentioned or clearly implied
+- Avoid duplicates or overly generic terms
+
+────────────────────────────
+OTHER EXTRACTIONS
+────────────────────────────
+- roleDomain: classify based on responsibilities and skills (not just title)
+- responsibilities: clear, action-oriented tasks
+- requiredSkills: strictly required qualifications
+- niceToHave: optional or preferred skills
+
+────────────────────────────
+CRITICAL OUTPUT RULES
+────────────────────────────
+Return ONLY valid JSON that strictly matches the required schema.
+Do NOT include explanations, markdown, or extra text.
+Do NOT wrap the JSON in code blocks.
+
+────────────────────────────
+JOB DESCRIPTION
+────────────────────────────
 ${state.jdRaw}
----`;
+`;
 
   try {
     const result = await structuredLLM.invoke(prompt);
