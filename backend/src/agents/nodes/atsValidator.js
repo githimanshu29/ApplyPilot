@@ -46,7 +46,7 @@ export async function atsValidatorNode(state) {
   const present = [];
   const missing = [];
 
-  // 🔍 Keyword validation
+  //  Keyword validation
   for (const keyword of keywordsToCheck) {
     const kw = keyword.toLowerCase();
 
