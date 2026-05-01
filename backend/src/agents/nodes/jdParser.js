@@ -61,7 +61,9 @@ const JDSchema = z.object({
   salaryHints: z.string().optional(),
 
   location: z.string().optional(),
-  workType: z.enum(["remote", "hybrid", "onsite"]).optional(),
+  // workType: z.enum(["remote", "hybrid", "onsite"]).optional(),
+  // workType: z.enum(["remote", "hybrid", "onsite"]).optional().catch(undefined),
+  workType: z.enum(["remote", "hybrid", "onsite"]).optional().default("onsite"),
 });
 
 // const llm = new ChatGoogleGenerativeAI({
@@ -70,8 +72,14 @@ const JDSchema = z.object({
 //   apiKey: process.env.GEMINI_API_KEY,
 // });
 
+//llama-3.1-8b-instant
+const llms = [
+  "openai/gpt-oss-120b",
+  "llama-3.1-8b-instant",
+  "llama-3.3-70b-versatile",
+];
 const llm = new ChatGroq({
-  model: "llama-3.1-8b-instant",
+  model: llms[1],
   temperature: 0,
   apiKey: process.env.GROQ_API_KEY,
 });
