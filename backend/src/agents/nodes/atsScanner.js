@@ -1,8 +1,8 @@
-import { OpenAIEmbeddings } from "@langchain/openai";
+import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 
-const embeddings = new OpenAIEmbeddings({
-  model: "text-embedding-ada-002",
-  apiKey: process.env.OPENAI_API_KEY,
+const embeddings = new GoogleGenerativeAIEmbeddings({
+  model: "gemini-embedding-001",
+  apiKey: process.env.GEMINI_API_KEY,
 });
 
 // build resume text for keyword matching and embedding , profile state se aa rahi hai
