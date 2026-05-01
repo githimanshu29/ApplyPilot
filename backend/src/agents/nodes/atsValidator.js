@@ -23,15 +23,9 @@ export async function atsValidatorNode(state) {
   const resumeVersion = state.resumeVersion || {};
 
   // Unified keyword source (aligned with pipeline)
-  const gapPriority = (state.tailorPriority || []).map((k) =>
-    typeof k === "string" ? k : k.keyword,
-  );
-
-  const atsMissing = (state.missingKeywords || []).map((k) =>
-    typeof k === "string" ? k : k.keyword,
-  );
-
-  const keywordsToCheck = [...new Set([...gapPriority, ...atsMissing])]; // to avoid duplication
+  const mustHave = state.jdAnalysis?.atsKeywords?.mustHave || [];
+  const goodToHave = state.jdAnalysis?.atsKeywords?.goodToHave || [];
+  const keywordsToCheck = [...new Set([...mustHave, ...goodToHave])]; // to avoid duplication
 
   // Resume text
   const tailoredText = [
@@ -55,15 +49,26 @@ export async function atsValidatorNode(state) {
     } else {
       missing.push({
         keyword,
-        priority: gapPriority.includes(keyword) ? "high" : "medium",
+        priority: mustHave.includes(keyword) ? "high" : "medium",
       });
     }
   }
 
   //  Score calculation
-  const total = keywordsToCheck.length || 1;
-  const coverage = present.length / total;
+  // if there are no keywords to check, the resume passes by default
+  // this happens when jd_parser found no ats keywords — not the user's fault
+  if (keywordsToCheck.length === 0) {
+    console.log("[ats_validator] no keywords to check — passing by default");
+    return {
+      resumeVersion: { ...resumeVersion, atsScore: 100 },
+      missingKeywords: [],
+      atsRetryCount: (state.atsRetryCount || 0) + 1,
+      currentNode: "ats_validator",
+    };
+  }
 
+  const total = keywordsToCheck.length;
+  const coverage = present.length / total;
   const atsScore = Math.round(coverage * 100);
 
   const retryCount = (state.atsRetryCount || 0) + 1;
