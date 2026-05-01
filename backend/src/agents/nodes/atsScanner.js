@@ -70,7 +70,7 @@ export async function atsScannerNode(state) {
     const present = [];
     const missing = [];
 
-    // ---------- MUST HAVE ----------
+    //  MUST HAVE
     for (const keyword of mustHave) {
       const kw = keyword.toLowerCase();
 
@@ -87,7 +87,7 @@ export async function atsScannerNode(state) {
       }
     }
 
-    // ---------- GOOD TO HAVE ----------
+    // GOOD TO HAVE
     for (const keyword of goodToHave) {
       const kw = keyword.toLowerCase();
 
@@ -104,7 +104,7 @@ export async function atsScannerNode(state) {
       }
     }
 
-    // ---------- WEIGHTED SCORE ----------
+    //  WEIGHTED SCORE
     const mustScore =
       mustHave.length === 0
         ? 1
@@ -118,7 +118,7 @@ export async function atsScannerNode(state) {
 
     const finalScore = Math.round((0.7 * mustScore + 0.3 * goodScore) * 100);
 
-    // ---------- REASONS ----------
+    //  REASONS
     const reasons = [];
 
     if (mustScore > 0.8) {

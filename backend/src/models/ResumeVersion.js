@@ -48,6 +48,14 @@ const resumeVersionSchema = new mongoose.Schema(
     // diff tracking — what changed vs original
     originalBullets: [String],
     tailoredBullets: [String],
+    tailoredExperienceBullets: [
+      {
+        company: String,
+        role: String,
+        bullets: [String],
+        _id: false,
+      },
+    ],
     updatedSkills: [String],
     injectedKeywords: [String],
 

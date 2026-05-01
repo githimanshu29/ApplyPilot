@@ -93,6 +93,7 @@ export const ApplyAIState = Annotation.Root({
     default: () => ({
       originalBullets: [],
       tailoredBullets: [],
+      tailoredExperienceBullets: [],
       updatedSkills: [],
       injectedKeywords: [],
       summary: "",

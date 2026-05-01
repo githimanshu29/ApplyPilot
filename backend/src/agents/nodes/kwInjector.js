@@ -14,8 +14,14 @@ const InjectionSchema = z.object({
 //   apiKey: process.env.GEMINI_API_KEY,
 // });
 
+//llama-3.1-8b-instant
+const llms = [
+  "openai/gpt-oss-120b",
+  "llama-3.1-8b-instant",
+  "llama-3.3-70b-versatile",
+];
 const llm = new ChatGroq({
-  model: "llama-3.1-8b-instant",
+  model: llms[1],
   temperature: 0,
   apiKey: process.env.GROQ_API_KEY,
 });
@@ -28,104 +34,199 @@ function normalizeKeyword(k) {
   return typeof k === "string" ? k : k.keyword;
 }
 
+/**
+ * classifyKeywords
+ *
+ * Three buckets — only present and inferable go into the resume.
+ * Truly missing keywords NEVER get injected — they go to honestGapReport.
+ *
+ * present   → explicitly in skills, bullets, or resumeRaw
+ * inferable → not written but clearly implied by their project tech stack
+ * missing   → genuinely absent, cannot be added honestly
+ */
+function classifyKeywords(keywords, userProfile) {
+  const resumeText = [
+    userProfile.resumeRaw || "",
+    (userProfile.skills || []).join(" "),
+    (userProfile.bullets || []).join(" "),
+    (userProfile.experience || []).flatMap((e) => e.bullets || []).join(" "),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  // all tech in user's projects — things they've genuinely worked with
+  const projectTech = (userProfile.projects || [])
+    .flatMap((p) => [
+      ...(p.techStack || []),
+      ...(p.bullets || []),
+      p.description || "",
+    ])
+    .join(" ")
+    .toLowerCase();
+
+  const present = [];
+  const inferable = [];
+  const trulyMissing = [];
+
+  for (const keyword of keywords) {
+    const kw = keyword.toLowerCase().trim();
+
+    // check 1 — explicitly present anywhere in resume text
+    if (resumeText.includes(kw)) {
+      present.push(keyword);
+      continue;
+    }
+
+    // check 2 — inferable from project tech stack
+    // e.g. user has "Node.js + Express" → "REST API" is inferable
+    // e.g. user has "React" → "component-based architecture" is inferable
+    const inferableMap = {
+      "rest api": ["node", "express", "flask", "django", "fastapi", "spring"],
+      restful: ["node", "express", "flask", "django"],
+      "rest apis": ["node", "express", "flask", "django", "fastapi"],
+      "version control": ["git", "github", "gitlab"],
+      agile: ["scrum", "sprint", "jira"],
+      "ci/cd": ["github actions", "jenkins", "gitlab", "pipeline"],
+      cloud: ["aws", "gcp", "azure", "heroku", "vercel", "ec2", "s3"],
+      "database design": ["mongodb", "mysql", "postgresql", "mongoose", "sql"],
+      "api development": ["node", "express", "flask", "django", "rest"],
+      "component-based": ["react", "vue", "angular"],
+      "state management": ["react", "redux", "vue"],
+      "responsive design": ["css", "html", "react", "tailwind"],
+    };
+
+    const inferableTriggers = inferableMap[kw];
+    if (inferableTriggers) {
+      const isInferable = inferableTriggers.some(
+        (trigger) =>
+          projectTech.includes(trigger) || resumeText.includes(trigger),
+      );
+      if (isInferable) {
+        inferable.push(keyword);
+        continue;
+      }
+    }
+
+    // check 3 — partial match in project tech (user literally used this tech)
+    if (projectTech.includes(kw)) {
+      inferable.push(keyword);
+      continue;
+    }
+
+    // nothing found — this is truly missing
+    trulyMissing.push(keyword);
+  }
+
+  return { present, inferable, trulyMissing };
+}
+
 export async function kwInjectorNode(state) {
   console.log("[kw_injector] starting...");
 
   const resumeVersion = state.resumeVersion || {};
-
   const gapPriority = (state.tailorPriority || []).map(normalizeKeyword);
   const atsMissing = (state.missingKeywords || []).map(normalizeKeyword);
+  const allKeywords = [...new Set([...gapPriority, ...atsMissing])];
 
-  const keywordsToInject = [...new Set([...gapPriority, ...atsMissing])].slice(
-    0,
-    15,
-  ); //duplicate hata diye by using set
-
-  if (!keywordsToInject.length) {
-    console.log("[kw_injector] nothing to inject");
+  if (!allKeywords.length) {
+    console.log("[kw_injector] nothing to process");
     return {
-      resumeVersion: {
-        ...resumeVersion,
-        injectedKeywords: [],
+      resumeVersion: { ...resumeVersion, injectedKeywords: [] },
+      currentNode: "kw_injector",
+    };
+  }
+
+  // ── honesty gate ──────────────────────────────────────
+  const { present, inferable, trulyMissing } = classifyKeywords(
+    allKeywords,
+    state.userProfile,
+  );
+
+  const safeToInject = [...present, ...inferable];
+
+  console.log(
+    `[kw_injector] present: ${present.length}, inferable: ${inferable.length}, truly missing: ${trulyMissing.length}`,
+  );
+  console.log(
+    `[kw_injector] safe to inject: ${safeToInject.join(", ") || "none"}`,
+  );
+
+  if (trulyMissing.length > 0) {
+    console.log(
+      `[kw_injector] NOT injecting (user doesn't have these): ${trulyMissing.join(", ")}`,
+    );
+  }
+
+  // if nothing is honestly injectable, skip LLM call entirely
+  if (!safeToInject.length) {
+    console.log("[kw_injector] nothing honest to inject — skipping");
+    return {
+      resumeVersion: { ...resumeVersion, injectedKeywords: [] },
+      honestGapReport: {
+        bestAchievableScore: resumeVersion.atsScore || 0,
+        trulyMissingSkills: trulyMissing,
+        explanation:
+          `These skills are required but not present in your profile: ${trulyMissing.join(", ")}. ` +
+          `They cannot be added without misrepresenting your experience. ` +
+          `Consider building a project using these technologies to genuinely fill this gap.`,
       },
       currentNode: "kw_injector",
     };
   }
 
   const { jobTitle, company } = state.jdAnalysis || {};
-
   const currentSkills = state.userProfile?.skills || [];
   const gapInsights = state.gapInsights || [];
-
-  // 🔁 Retry context
   const retryCount = state.atsRetryCount || 0;
+
   const retryNote =
     retryCount > 0
-      ? `Previous attempt did not improve ATS score enough. Increase keyword coverage and improve clarity without overstuffing.`
+      ? `Previous attempt did not improve ATS score enough. Increase coverage of the approved keywords without overstuffing.`
       : "";
 
-  const prompt = `You are an expert resume optimizer focused on ATS (Applicant Tracking System) performance.
+  const prompt = `You are optimizing a resume for ATS screening.
 
-Your goal is to improve the candidate's SKILLS section and generate a strong PROFESSIONAL SUMMARY while keeping the resume truthful and realistic.
+Role: ${jobTitle} at ${company}
 
-────────────────────────────
-ROLE CONTEXT
-────────────────────────────
-Target Role: ${jobTitle} at ${company}
-
-Current Skills:
+Current skills:
 ${currentSkills.join(", ")}
 
-Keywords to Include (priority):
-${keywordsToInject.join(", ")}
+APPROVED keywords to include (these are already present or directly implied by the candidate's work — do NOT add anything outside this list):
+${safeToInject.join(", ")}
 
-Focus Areas:
+Focus areas:
 ${gapInsights.join(", ") || "general improvement"}
 
-────────────────────────────
-INSTRUCTIONS
-────────────────────────────
-1. Update the SKILLS section:
-   - Naturally include the provided keywords where appropriate
-   - Do NOT blindly add all keywords if unrealistic
-   - Merge with existing skills intelligently
-   - Group skills into logical categories (e.g., Backend, DevOps, Databases, Tools)
-
-2. Maintain authenticity:
-   - Do NOT invent tools, technologies, or experience
-   - Only include skills that are realistically aligned with the candidate profile
-
-3. Avoid keyword stuffing:
-   - Keep the skills section clean, readable, and professional
-   - Prefer quality over quantity
-
-4. Generate a PROFESSIONAL SUMMARY:
-   - 2–3 concise lines
-   - Tailored to the target role
-   - Highlight strengths, technologies, and impact
-   - ATS-friendly but human-readable
-
-5. Prioritize high-impact keywords:
-   - Ensure strong coverage of critical (high-priority) keywords
-   - Maintain natural language flow
+Rules:
+1. Update skills section — naturally include approved keywords
+2. Group skills logically (Backend, DevOps, Tools, etc.)
+3. ONLY use keywords from the approved list above — do NOT add anything else
+4. Avoid keyword stuffing — keep it human-readable
+5. Write a concise 2–3 line professional summary aligned with the role
 
 ${retryNote}
 
-────────────────────────────
-CRITICAL OUTPUT RULES
-────────────────────────────
-Return ONLY valid JSON that strictly matches the required schema.
-Do NOT include explanations, markdown, or extra text.
-Do NOT wrap the JSON in code blocks.
-Ensure all fields are present and correctly formatted.
-`;
+Return structured output only.`;
 
   try {
     const result = await structuredLLM.invoke(prompt);
 
     console.log(
-      `[kw_injector] injected ${result.injectedKeywords?.length || 0} keywords`,
+      `[kw_injector] injected ${result.injectedKeywords?.length || 0} keywords honestly`,
     );
+
+    // build honest gap report for truly missing skills — always surface this truth
+    const honestGapReport =
+      trulyMissing.length > 0
+        ? {
+            bestAchievableScore: null, // filled by ats_validator after this run
+            trulyMissingSkills: trulyMissing,
+            explanation:
+              `The following skills are required but not in your profile: ${trulyMissing.join(", ")}. ` +
+              `These were not added to your resume. To genuinely qualify for this role, ` +
+              `consider building a project using these technologies.`,
+          }
+        : null;
 
     return {
       resumeVersion: {
@@ -134,13 +235,17 @@ Ensure all fields are present and correctly formatted.
         injectedKeywords: result.injectedKeywords || [],
         summary: result.summary || "",
       },
+      honestGapReport,
       currentNode: "kw_injector",
     };
   } catch (err) {
     console.error("[kw_injector] failed:", err.message);
-
     return {
       errors: [{ node: "kw_injector", message: err.message }],
+      resumeVersion: {
+        ...resumeVersion,
+        injectedKeywords: [],
+      },
     };
   }
 }

@@ -8,6 +8,7 @@ import { Server } from "socket.io";
 import connectDB from "./lib/db.js";
 import redis from "./lib/redis.js";
 import authRoutes from "./routes/auth.route.js";
+import analyzeRoutes from "./routes/analyze.route.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -27,6 +28,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/analyze", analyzeRoutes);
 
 io.on("connection", (socket) => {
   console.log(`Socket connected: ${socket.id}`);

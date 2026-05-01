@@ -181,7 +181,7 @@ Do NOT introduce skills that are not present in candidate skills.
     const objectStart = raw.indexOf("{");
 
     if (arrayStart !== -1 && (objectStart === -1 || arrayStart < objectStart)) {
-      // array-first response — find matching ]
+      // array-first response — find matching
       let depth = 0;
       let arrayEnd = -1;
 

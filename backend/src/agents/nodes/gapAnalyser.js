@@ -85,11 +85,13 @@ export async function gapAnalyzerNode(state) {
 
     // ---------- PRIORITY ----------
     const tailorPriority = [
-      ...gapAnalysis
-        .filter((g) => !g.present && g.type === "required") //filtering kar raha hai jo skill required but present nhi hai
-        .map((g) => g.skill), // converting object to string inside a array like:["Docker"]
+      ...new Set([
+        ...gapAnalysis
+          .filter((g) => !g.present && g.type === "required") //filtering kar raha hai jo skill required but present nhi hai
+          .map((g) => g.skill), // converting object to string inside a array like:["Docker"]
 
-      ...missingKeywords.map((k) => k.keyword || k),
+        ...missingKeywords.map((k) => k.keyword || k),
+      ]),
     ];
 
     // ---------- INSIGHTS ----------
