@@ -5,10 +5,10 @@ import { z } from "zod";
 const BulletSchema = z.object({
   rewrittenBullets: z.array(
     z.object({
-      original: z.string(),
+      original: z.string().optional().default(""), // LLM sometimes skips this
       rewritten: z.string(),
       qualityScore: z.number().min(0).max(1),
-      reasoning: z.string(),
+      reasoning: z.string().optional().default(""), // not critical, make safe too
     }),
   ),
 });
@@ -19,15 +19,21 @@ const BulletSchema = z.object({
 //   apiKey: process.env.GEMINI_API_KEY,
 // });
 
+//llama-3.1-8b-instant
+const llms = [
+  "openai/gpt-oss-120b",
+  "llama-3.1-8b-instant",
+  "llama-3.3-70b-versatile",
+];
 const llm = new ChatGroq({
-  model: "llama-3.1-8b-instant",
+  model: llms[2],
   temperature: 0,
   apiKey: process.env.GROQ_API_KEY,
 });
 
-const structuredLLM = llm.withStructuredOutput(BulletSchema, {
-  name: "rewrite_bullets",
-});
+// const structuredLLM = llm.withStructuredOutput(BulletSchema, {
+//   name: "rewrite_bullets",
+// });
 
 function normalizeKeyword(k) {
   return typeof k === "string" ? k : k.keyword;
@@ -145,18 +151,95 @@ Return ONLY valid JSON that strictly matches the required schema.
 Do NOT include explanations, markdown, or extra text.
 Do NOT wrap the JSON in code blocks.
 Ensure each bullet has: original, rewritten, qualityScore, reasoning.
+
+STRICT RULE:
+Do NOT introduce skills that are not present in candidate skills.
 `;
 
   try {
-    const result = await structuredLLM.invoke(prompt);
+    const response = await llm.invoke(prompt);
 
-    const rewritten = result.rewrittenBullets || [];
+    // extract raw text and strip any markdown code blocks if present
+    let raw = response.content.trim();
+    console.log("[bullet_rewriter] raw response:", raw.slice(0, 500));
+    if (raw.startsWith("```")) {
+      raw = raw
+        .replace(/^```(?:json)?\n?/, "")
+        .replace(/\n?```$/, "")
+        .trim();
+    }
 
-    const tailoredBullets = rewritten.map((r) => r.rewritten);
+    // extract outermost JSON object robustly
+    // walks from first { and tracks brace depth to find the matching }
+    // model can return either:
+    // shape 1: { "rewrittenBullets": [...] }
+    // shape 2: [{...}, {...}]  ← llama returns this directly
+    let rewritten = [];
+
+    // detect if response is array-first or object-first
+    const arrayStart = raw.indexOf("[");
+    const objectStart = raw.indexOf("{");
+
+    if (arrayStart !== -1 && (objectStart === -1 || arrayStart < objectStart)) {
+      // array-first response — find matching ]
+      let depth = 0;
+      let arrayEnd = -1;
+
+      for (let i = arrayStart; i < raw.length; i++) {
+        if (raw[i] === "[") depth++;
+        else if (raw[i] === "]") {
+          depth--;
+          if (depth === 0) {
+            arrayEnd = i;
+            break;
+          }
+        }
+      }
+
+      if (arrayEnd === -1) throw new Error("Malformed array in LLM response");
+      rewritten = JSON.parse(raw.slice(arrayStart, arrayEnd + 1));
+    } else if (objectStart !== -1) {
+      // object-first response — find matching
+      let depth = 0;
+      let objectEnd = -1;
+
+      for (let i = objectStart; i < raw.length; i++) {
+        if (raw[i] === "{") depth++;
+        else if (raw[i] === "}") {
+          depth--;
+          if (depth === 0) {
+            objectEnd = i;
+            break;
+          }
+        }
+      }
+
+      if (objectEnd === -1) throw new Error("Malformed object in LLM response");
+      const parsed = JSON.parse(raw.slice(objectStart, objectEnd + 1));
+
+      rewritten =
+        parsed.rewrittenBullets ||
+        parsed.bullets ||
+        Object.values(parsed).find((v) => Array.isArray(v)) ||
+        [];
+    } else {
+      throw new Error("No JSON found in LLM response");
+    }
+
+    if (!rewritten.length) {
+      throw new Error("Could not extract bullets array from LLM response");
+    }
+
+    // normalize qualityScore — some models return 0-10 instead of 0-1
+    rewritten = rewritten.map((r) => ({
+      ...r,
+      qualityScore: r.qualityScore > 1 ? r.qualityScore / 10 : r.qualityScore,
+    }));
+    const tailoredBullets = rewritten.map((r) => r.rewritten).filter(Boolean);
 
     const qualityScore =
       rewritten.length > 0
-        ? rewritten.reduce((sum, r) => sum + r.qualityScore, 0) /
+        ? rewritten.reduce((sum, r) => sum + (r.qualityScore || 0.8), 0) /
           rewritten.length
         : 0;
 
@@ -176,11 +259,13 @@ Ensure each bullet has: original, rewritten, qualityScore, reasoning.
     };
   } catch (err) {
     console.error("[bullet_rewriter] failed:", err.message);
-
     return {
       errors: [{ node: "bullet_rewriter", message: err.message }],
       resumeVersion: {
         ...resumeVersion,
+        tailoredBullets: resumeVersion.tailoredBullets?.length
+          ? resumeVersion.tailoredBullets
+          : currentBullets,
         qualityScore: 1,
       },
     };
