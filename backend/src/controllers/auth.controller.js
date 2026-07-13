@@ -51,16 +51,15 @@ export const register = async (req, res) => {
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
+    //always save refresh token like this
     user.refreshToken = refreshToken;
     await user.save();
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      secure: process.env.NODE_ENV === "production", 
-      sameSite:process.env.NODE_ENV === "production" 
-          ? "none"
-          : "lax",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       path: "/",
     });
 
@@ -90,7 +89,7 @@ export const login = async (req, res) => {
         message: "Provide valide email and password",
       });
     }
-    
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({
@@ -99,7 +98,6 @@ export const login = async (req, res) => {
       });
     }
 
-    
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({
@@ -108,22 +106,17 @@ export const login = async (req, res) => {
       });
     }
 
-
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
-    
     user.refreshToken = refreshToken;
     await user.save();
 
-    
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      secure: process.env.NODE_ENV === "production", 
-      sameSite:process.env.NODE_ENV === "production" 
-          ? "none"
-          : "lax",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       path: "/",
     });
 
@@ -160,7 +153,6 @@ export const refreshToken = async (req, res) => {
       });
     }
 
-    
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
     const user = await User.findById(decoded.userId);
@@ -180,11 +172,9 @@ export const refreshToken = async (req, res) => {
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      secure: process.env.NODE_ENV === "production", 
-      
-      sameSite:process.env.NODE_ENV === "production" 
-          ? "none"
-          : "lax",
+      secure: process.env.NODE_ENV === "production",
+
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       path: "/",
     });
 

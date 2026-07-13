@@ -36,7 +36,7 @@ export function getGraph() {
 
   // ── edges ──────────────────────────────────────────────
 
-  graph.addEdge(START, "jd_parser");
+  graph.addEdge(START, "jd_parser"); //
 
   // parallel fan-out — LangGraph natively waits for BOTH before running gap_analyzer
   // no join guard node needed — that's built into how LangGraph handles multiple incoming edges

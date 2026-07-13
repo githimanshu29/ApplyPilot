@@ -30,54 +30,61 @@ export const analyzeJD = async (req, res) => {
       ],
     });
 
-    const graph = getGraph();
+    const graph = getGraph(); //initialised
 
     // build userProfile from the logged-in user's stored profile
-    // const userProfile = {
-    //   skills: req.user.profile?.skills || [],
-    //   bullets:
-    //     req.user.profile?.experience?.flatMap((e) => e.bullets || []) || [],
-    //   education: req.user.profile?.education || {},
-    //   projects: req.user.profile?.projects || [],
-    //   resumeRaw: req.user.profile?.resumeRaw || "",
-    //   experience: req.user.profile?.experience || [],
-    // };
+    const userProfile = {
+      skills: req.user.profile?.skills || [],
+      bullets:
+        req.user.profile?.experience?.flatMap((e) => e.bullets || []) || [],
+      education: req.user.profile?.education || {},
+      projects: req.user.profile?.projects || [],
+      resumeRaw: req.user.profile?.resumeRaw || "",
+      experience: req.user.profile?.experience || [],
+    };
+
+    if (!userProfile.skills.length && !userProfile.resumeRaw) {
+      return res.status(400).json({
+        message:
+          "Your profile is empty. Please update your profile with skills and experience before analyzing a JD.",
+      });
+    }
 
     //Hardcoding profile to check the pipeline
-    const userProfile = {
-      skills: [
-        "Node.js",
-        "Express",
-        "JavaScript",
-        "MongoDB",
-        "REST APIs",
-        "Git",
-      ],
-      bullets: [
-        "Built REST API for e-commerce platform using Node.js and Express",
-        "Designed MongoDB schemas for user and product management",
-        "Integrated JWT authentication and role-based access control",
-        "Deployed application on AWS EC2 with Nginx reverse proxy",
-      ],
-      education: {
-        degree: "B.Tech",
-        branch: "Computer Science",
-        college: "XYZ University",
-        cgpa: 8.2,
-        year: 2025,
-      },
-      projects: [
-        {
-          name: "ApplyAI",
-          description: "AI-powered job application assistant",
-          techStack: ["Node.js", "MongoDB", "LangChain", "React"],
-          bullets: ["Built backend API", "Integrated LangGraph pipeline"],
-        },
-      ],
-      resumeRaw:
-        "Node.js Express MongoDB REST APIs JavaScript Git AWS JWT authentication backend developer",
-      experience: [],
-    };
+    // const userProfile = {
+    //   skills: [
+    //     "Node.js",
+    //     "Express",
+    //     "JavaScript",
+    //     "MongoDB",
+    //     "REST APIs",
+    //     "Git",
+    //   ],
+    //   bullets: [
+    //     "Built REST API for e-commerce platform using Node.js and Express",
+    //     "Designed MongoDB schemas for user and product management",
+    //     "Integrated JWT authentication and role-based access control",
+    //     "Deployed application on AWS EC2 with Nginx reverse proxy",
+    //   ],
+    //   education: {
+    //     degree: "B.Tech",
+    //     branch: "Computer Science",
+    //     college: "XYZ University",
+    //     cgpa: 8.2,
+    //     year: 2025,
+    //   },
+    //   projects: [
+    //     {
+    //       name: "ApplyAI",
+    //       description: "AI-powered job application assistant",
+    //       techStack: ["Node.js", "MongoDB", "LangChain", "React"],
+    //       bullets: ["Built backend API", "Integrated LangGraph pipeline"],
+    //     },
+    //   ],
+    //   resumeRaw:
+    //     "Node.js Express MongoDB REST APIs JavaScript Git AWS JWT authentication backend developer",
+    //   experience: [],
+    // };
 
     // run the full LangGraph pipeline
     const result = await graph.invoke({

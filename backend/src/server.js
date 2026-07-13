@@ -9,6 +9,8 @@ import connectDB from "./lib/db.js";
 import redis from "./lib/redis.js";
 import authRoutes from "./routes/auth.route.js";
 import analyzeRoutes from "./routes/analyze.route.js";
+import jobRoutes from "./routes/job.route.js";
+import profileRoutes from "./routes/profile.route.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -19,6 +21,7 @@ export const io = new Server(httpServer, {
     methods: ["GET", "POST"],
   },
 });
+global._io = io;
 
 app.use(cors({ origin: process.env.CLIENT_URL }));
 app.use(express.json());
@@ -29,6 +32,8 @@ app.get("/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/analyze", analyzeRoutes);
+app.use("/api/jobs", jobRoutes);
+app.use("/api/profile", profileRoutes);
 
 io.on("connection", (socket) => {
   console.log(`Socket connected: ${socket.id}`);

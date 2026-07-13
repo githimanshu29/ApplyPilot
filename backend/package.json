@@ -9,7 +9,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+     "worker": "node --watch src/jobs/worker.js"
   },
   "keywords": [],
   "author": "",
@@ -23,8 +24,10 @@
     "@langchain/langgraph": "^1.2.8",
     "@langchain/langgraph-checkpoint-redis": "^1.0.4",
     "@langchain/openai": "^1.4.3",
+    "axios": "^1.15.2",
     "bcryptjs": "^3.0.3",
-    "bullmq": "^5.73.1",
+    "bullmq": "^5.76.4",
+    "cheerio": "^1.2.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.1",
