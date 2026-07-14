@@ -3,67 +3,82 @@ import { ChatGroq } from "@langchain/groq";
 import { z } from "zod";
 
 const JDSchema = z.object({
-  jobTitle: z.string().min(1),
-  company: z.string().min(1),
+  jobTitle: z.string().default(""),
+  company: z.string().default(""),
 
-  roleDomain: z.enum([
-    "frontend",
-    "backend",
-    "fullstack",
-    "machine_learning",
-    "data_science",
-    "genai",
-    "ai_agents",
-    "devops",
-    "mobile",
-    "ui_ux",
-    "cloud",
-    "cybersecurity",
+  roleDomain: z
+    .enum([
+      "frontend",
+      "backend",
+      "fullstack",
+      "machine_learning",
+      "data_science",
+      "genai",
+      "ai_agents",
+      "devops",
+      "mobile",
+      "ui_ux",
+      "cloud",
+      "cybersecurity",
 
-    "finance",
-    "accounting",
-    "consulting",
-    "marketing",
-    "sales",
-    "operations",
-    "hr",
+      "finance",
+      "accounting",
+      "consulting",
+      "marketing",
+      "sales",
+      "operations",
+      "hr",
 
-    "other",
-  ]),
+      "other",
+    ])
+    .default("other"),
 
-  seniorityLevel: z.enum(["fresher", "junior", "mid", "senior"]),
+  seniorityLevel: z
+    .enum(["fresher", "junior", "mid", "senior"])
+    .nullable()
+    .optional(),
   experienceYears: z
-    .object({ min: z.number().optional(), max: z.number().optional() })
+    .object({
+      min: z.number().nullable().optional(),
+      max: z.number().nullable().optional(),
+    })
     .optional(),
 
-  requiredSkills: z.array(z.string()),
-  niceToHave: z.array(z.string()),
+  requiredSkills: z.array(z.string()).default([]),
 
-  tools: z.array(z.string()),
+  niceToHave: z.array(z.string()).default([]),
 
-  responsibilities: z.array(z.string()),
+  tools: z.array(z.string()).default([]),
+
+  responsibilities: z.array(z.string()).default([]),
 
   atsKeywords: z.object({
     mustHave: z
       .array(z.string())
       .describe(
         "10-15 critical keywords that MUST appear in the resume for ATS filtering. Include exact tech names, frameworks, tools, and domain terms.",
-      ),
+      )
+      .default([]),
 
     goodToHave: z
       .array(z.string())
       .describe(
         "Optional keywords that improve ATS ranking but are not mandatory. Include complementary tools, soft skills, methodologies, and secondary technologies.",
-      ),
+      )
+      .default([]),
   }),
 
-  redFlags: z.array(z.string()),
-  salaryHints: z.string().optional(),
+  redFlags: z.array(z.string()).default([]),
+  salaryHints: z.string().nullable().optional(),
 
-  location: z.string().optional(),
+  location: z.string().nullable().optional(),
   // workType: z.enum(["remote", "hybrid", "onsite"]).optional(),
   // workType: z.enum(["remote", "hybrid", "onsite"]).optional().catch(undefined),
-  workType: z.enum(["remote", "hybrid", "onsite"]).optional().default("onsite"),
+  workType: z
+    .enum(["remote", "hybrid", "onsite"])
+    .nullable()
+    .optional()
+    .transform((v) => v ?? "onsite"),
 });
 
 // const llm = new ChatGoogleGenerativeAI({
@@ -129,6 +144,37 @@ CRITICAL OUTPUT RULES
 Return ONLY valid JSON that strictly matches the required schema.
 Do NOT include explanations, markdown, or extra text.
 Do NOT wrap the JSON in code blocks.
+
+Company extraction:
+If the company name is not explicitly mentioned,
+return an empty string.
+Never infer the company from the first sentence of the JD.
+
+
+requiredSkills:
+Only include skills explicitly required to qualify.
+tools:
+Every framework, language, platform, library, software, cloud service,
+or technology mentioned anywhere.
+
+IMPORTANT
+Never output null.
+If information is unavailable:
+- string -> ""
+- array -> []
+- object -> {}
+- optional field -> omit entirely
+Never use null.
+
+
+ATS keywords MUST include every item in requiredSkills and tools.
+Never omit a required skill from ATS keywords.
+
+
+If the JD does not explicitly mention experience,
+infer the most likely seniority from the responsibilities.
+Only if it is impossible to infer,
+return "junior".
 
 ────────────────────────────
 JOB DESCRIPTION
