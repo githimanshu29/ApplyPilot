@@ -35,21 +35,15 @@ const userSchema = new mongoose.Schema(
     profile: {
       skills: [String],
       resumeRaw: String,
+
       education: {
         degree: String,
         branch: String,
         college: String,
         cgpa: Number,
-        graduationYear: Number,
+        year: Number,
       },
-      projects: [
-        {
-          name: String,
-          description: String,
-          techStack: [String],
-          bullets: [String],
-        },
-      ],
+
       experience: [
         {
           company: String,
@@ -58,6 +52,50 @@ const userSchema = new mongoose.Schema(
           bullets: [String],
         },
       ],
+
+      projects: [
+        {
+          name: String,
+          description: String,
+          techStack: [String],
+          bullets: [String],
+        },
+      ],
+
+      certifications: [
+        {
+          name: String,
+          issuer: String,
+        },
+      ],
+
+      achievements: [
+        {
+          title: String,
+          description: String,
+        },
+      ],
+
+      links: {
+        github: String,
+        linkedin: String,
+        portfolio: String,
+        leetcode: String,
+        codeforces: String,
+        codechef: String,
+        hackerrank: String,
+        kaggle: String,
+        behance: String,
+        dribbble: String,
+        website: String,
+      },
+
+      // tracks the uploaded resume file metadata
+      resumeMeta: {
+        filename: String,
+        uploadedAt: Date,
+        size: Number,
+      },
     },
   },
   { timestamps: true },
