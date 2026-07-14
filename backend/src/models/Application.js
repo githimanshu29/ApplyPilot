@@ -46,6 +46,14 @@ const applicationSchema = new mongoose.Schema(
       ref: "ResumeVersion",
     },
 
+    notes: String, // user can add personal notes to any application
+    isDeleted: {
+      // soft delete flag
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
     // full event history — shown as timeline on application detail page
     timeline: [timelineEventSchema],
 

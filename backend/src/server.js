@@ -11,7 +11,7 @@ import authRoutes from "./routes/auth.route.js";
 import analyzeRoutes from "./routes/analyze.route.js";
 import jobRoutes from "./routes/job.route.js";
 import profileRoutes from "./routes/profile.route.js";
-
+import applicationRoutes from "./routes/application.route.js";
 const app = express();
 const httpServer = createServer(app);
 
@@ -34,6 +34,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/analyze", analyzeRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/applications", applicationRoutes);
 
 io.on("connection", (socket) => {
   console.log(`Socket connected: ${socket.id}`);

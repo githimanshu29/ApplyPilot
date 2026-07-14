@@ -110,6 +110,11 @@ export const ApplyAIState = Annotation.Root({
     reducer: (_, next) => next,
     default: () => null,
   }),
+  //prepQuestions
+  prepQuestions: Annotation({
+    reducer: (_, next) => next,
+    default: () => [],
+  }),
 
   // ─pipeline metadata
   currentNode: Annotation({ reducer: (_, next) => next, default: () => "" }),

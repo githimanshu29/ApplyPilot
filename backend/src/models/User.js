@@ -59,6 +59,8 @@ const userSchema = new mongoose.Schema(
           description: String,
           techStack: [String],
           bullets: [String],
+          githubUrl: String, // added
+          liveUrl: String,
         },
       ],
 
@@ -66,6 +68,7 @@ const userSchema = new mongoose.Schema(
         {
           name: String,
           issuer: String,
+          year: Number,
         },
       ],
 
@@ -88,6 +91,8 @@ const userSchema = new mongoose.Schema(
         behance: String,
         dribbble: String,
         website: String,
+        email: String, // added
+        phone: String,
       },
 
       // tracks the uploaded resume file metadata

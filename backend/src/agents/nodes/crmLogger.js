@@ -1,7 +1,7 @@
 import { Application } from "../../models/Application.js";
 import { JDAnalysis } from "../../models/JDAnalysis.js";
 import { ResumeVersion } from "../../models/ResumeVersion.js";
-
+import { PrepSession } from "../../models/PrepSession.js";
 export async function crmLoggerNode(state) {
   console.log("[crm_logger] saving results to DB...");
 
@@ -109,6 +109,19 @@ export async function crmLoggerNode(state) {
     );
 
     console.log("[crm_logger] saved successfully");
+
+    // save interview prep questions if generated
+    if (state.prepQuestions?.length > 0) {
+      await PrepSession.create({
+        applicationId,
+        userId,
+        questions: state.prepQuestions,
+        status: "generated",
+      });
+      console.log(
+        `[crm_logger] saved ${state.prepQuestions.length} prep questions`,
+      );
+    }
 
     return { currentNode: "crm_logger" };
   } catch (err) {

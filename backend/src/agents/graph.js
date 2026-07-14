@@ -15,6 +15,7 @@ import {
 } from "./nodes/atsValidator.js";
 import { pdfBuilderNode } from "./nodes/pdfBuilder.js";
 import { crmLoggerNode } from "./nodes/crmLogger.js";
+import { interviewPrepNode } from "./nodes/interviewPrep.js";
 
 let compiledGraph = null;
 
@@ -33,7 +34,7 @@ export function getGraph() {
   graph.addNode("ats_validator", atsValidatorNode);
   graph.addNode("pdf_builder", pdfBuilderNode);
   graph.addNode("crm_logger", crmLoggerNode);
-
+  graph.addNode("interview_prep", interviewPrepNode);
   // ── edges ──────────────────────────────────────────────
 
   graph.addEdge(START, "jd_parser"); //
@@ -54,8 +55,9 @@ export function getGraph() {
   graph.addConditionalEdges("ats_validator", shouldContinueAfterValidation);
 
   // terminal
-  graph.addEdge("pdf_builder", "crm_logger");
-  graph.addEdge("crm_logger", END);
+ graph.addEdge("pdf_builder", "crm_logger");
+graph.addEdge("crm_logger", "interview_prep");
+graph.addEdge("interview_prep", END);
 
   compiledGraph = graph.compile();
   return compiledGraph;
