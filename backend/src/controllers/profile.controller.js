@@ -68,7 +68,7 @@ export const uploadResume = async (req, res) => {
     const rateCheck = await checkRateLimit(
       req.user._id.toString(),
       "resume_upload",
-      Number(process.env.RESUME_UPLOAD_LIMIT) || 5,
+      Number(process.env.RESUME_UPLOAD_LIMIT) || 100,
       Number(process.env.RESUME_UPLOAD_WINDOW_SEC) || 3600,
     );
 

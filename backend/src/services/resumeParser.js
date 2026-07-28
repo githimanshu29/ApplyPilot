@@ -24,19 +24,19 @@ const EducationSchema = z.object({
   branch: z.string().default(""),
   college: z.string().default(""),
   cgpa: z.number().nullable().optional(),
-  year: z.number().nullable().optional(),
+  year: z.union([z.string(), z.number()]).nullable().optional(),
 });
 
 const CertificationSchema = z.object({
   name: z.string().default(""),
   issuer: z.string().default(""),
-  year: z.number().nullable().optional(), // added
+  year: z.union([z.string(), z.number()]).nullable().optional(), // added
 });
 
 const AchievementSchema = z.object({
   title: z.string().default(""),
   description: z.string().default(""),
-  year: z.number().nullable().optional(), // added
+  year: z.union([z.string(), z.number()]).nullable().optional(), // added
 });
 
 const LinksSchema = z.object({

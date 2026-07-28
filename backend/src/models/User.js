@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import mongoose from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
@@ -20,11 +20,11 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
-    gender: {
-      type: String,
-      enum: ["male", "female", "other"],
-      required: true,
-    },
+    // gender: {
+    //   type: String,
+    //   enum: ["male", "female", "other"],
+    //   required: optional,
+    // },
 
     refreshToken: {
       type: String,
@@ -41,7 +41,10 @@ const userSchema = new mongoose.Schema(
         branch: String,
         college: String,
         cgpa: Number,
-        year: Number,
+        year: {
+          type: Schema.Types.Mixed,
+          default: "",
+        },
       },
 
       experience: [
@@ -68,7 +71,10 @@ const userSchema = new mongoose.Schema(
         {
           name: String,
           issuer: String,
-          year: Number,
+          year: {
+            type: Schema.Types.Mixed,
+            default: "",
+          },
         },
       ],
 
@@ -76,6 +82,10 @@ const userSchema = new mongoose.Schema(
         {
           title: String,
           description: String,
+          year: {
+            type: Schema.Types.Mixed,
+            default: "",
+          },
         },
       ],
 

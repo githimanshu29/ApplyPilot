@@ -1,5 +1,7 @@
+import { success } from "zod";
 import { User } from "../models/User.js";
 import jwt from "jsonwebtoken";
+import { tryCatch } from "bullmq";
 
 const generateAccessToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_ACCESS_SECRET, {
@@ -16,6 +18,7 @@ const generateRefreshToken = (userId) => {
 // REGISTER
 export const register = async (req, res) => {
   try {
+    console.log("Hello this is me register controller");
     const { name, email, password, gender, avatar } = req.body;
 
     const existingUser = await User.findOne({ email });
@@ -70,6 +73,7 @@ export const register = async (req, res) => {
 
       user: safeUser,
     });
+    console.log("res is sent.");
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -218,6 +222,31 @@ export const logout = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
+export const getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "User retrieved successfully",
+      user,
+    });
+  } catch (error) {
+    return res.status(500).json({
       success: false,
       message: "Server error",
       error: error.message,
