@@ -1,9 +1,22 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 
-const llm = new ChatGoogleGenerativeAI({
-  model: "gemini-2.0-flash",
-  temperature: 0.4, // slight creativity for varied questions
-  apiKey: process.env.GEMINI_API_KEY,
+import { ChatGroq } from "@langchain/groq";
+
+// const llm = new ChatGoogleGenerativeAI({
+//   model: "gemini-2.0-flash",
+//   temperature: 0.4, // slight creativity for varied questions
+//   apiKey: process.env.GEMINI_API_KEY,
+// });
+
+const llms = [
+  "openai/gpt-oss-120b",
+  "llama-3.1-8b-instant",
+  "llama-3.3-70b-versatile",
+];
+const llm = new ChatGroq({
+  model: llms[1],
+  temperature: 0,
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 /**

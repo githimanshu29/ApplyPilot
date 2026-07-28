@@ -30,7 +30,16 @@ const applicationSchema = new mongoose.Schema(
     //for dashboard updates
     status: {
       type: String,
-      enum: ["saved", "applied", "screening", "interview", "offer", "rejected"],
+      enum: [
+        "saved",
+        "applied",
+        "analysing",
+        "analyzed",
+        "screening",
+        "interview",
+        "offer",
+        "rejected",
+      ],
       default: "saved",
     },
 

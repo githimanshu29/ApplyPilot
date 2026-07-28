@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import "./jobs/worker.js";
 
 import connectDB from "./lib/db.js";
 import redis from "./lib/redis.js";
