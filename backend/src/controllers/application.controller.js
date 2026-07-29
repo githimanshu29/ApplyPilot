@@ -80,6 +80,11 @@ export const getApplicationById = async (req, res) => {
       PrepSession.findOne({ applicationId: application._id }).lean(),
     ]);
 
+    console.log("========== JD ANALYSIS ==========");
+    console.log("Present:", jdAnalysis?.presentKeywords);
+    console.log("Missing:", jdAnalysis?.missingKeywords);
+    console.log("ATS Keywords:", jdAnalysis?.atsKeywords);
+    console.log("===============================");
     return res.status(200).json({
       success: true,
       application,

@@ -21,7 +21,7 @@ const llms = [
   "llama-3.3-70b-versatile",
 ];
 const llm = new ChatGroq({
-  model: llms[1],
+  model: llms[2],
   temperature: 0,
   apiKey: process.env.GROQ_API_KEY,
 });
