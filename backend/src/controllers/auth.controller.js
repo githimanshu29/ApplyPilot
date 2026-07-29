@@ -124,17 +124,17 @@ export const login = async (req, res) => {
       path: "/",
     });
 
-    const safeUser = {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-    };
+    // const safeUser = {
+    //   id: user._id,
+    //   name: user.name,
+    //   email: user.email,
+    // };
 
     res.status(200).json({
       success: true,
       message: "Login successful",
       accessToken,
-      user: safeUser,
+      user: user,
     });
   } catch (error) {
     res.status(500).json({
