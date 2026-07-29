@@ -23,16 +23,29 @@ export async function atsValidatorNode(state) {
   const resumeVersion = state.resumeVersion || {};
 
   // Unified keyword source (aligned with pipeline)
-  const mustHave = state.jdAnalysis?.atsKeywords?.mustHave || [];
-  const goodToHave = state.jdAnalysis?.atsKeywords?.goodToHave || [];
+  const atsKeywords = state.jdAnalysis?.atsKeywords;
+
+  let mustHave = [];
+  let goodToHave = [];
+
+  if (Array.isArray(atsKeywords)) {
+    // Current parser output
+    mustHave = atsKeywords;
+  } else {
+    // Future parser output
+    mustHave = atsKeywords?.mustHave || [];
+    goodToHave = atsKeywords?.goodToHave || [];
+  }
+
   const keywordsToCheck = [...new Set([...mustHave, ...goodToHave])]; // to avoid duplication
 
   // Resume text
   const tailoredText = [
-    resumeVersion.summary || "",
-    (resumeVersion.updatedSkills || []).join(" "),
-    (resumeVersion.tailoredBullets || []).join(" "),
-    state.userProfile?.resumeRaw || "",
+    resumeVersion.resumeJSON?.summary || "",
+    ...(resumeVersion.updatedSkills || []),
+    ...(resumeVersion.tailoredBullets || []),
+    ...(resumeVersion.resumeJSON?.experience?.flatMap((e) => e.bullets || []) ||
+      []),
   ]
     .join(" ")
     .toLowerCase(); // by join converted to string and lowerCase also
@@ -58,16 +71,19 @@ export async function atsValidatorNode(state) {
   // if there are no keywords to check, the resume passes by default
   // this happens when jd_parser found no ats keywords — not the user's fault
   if (keywordsToCheck.length === 0) {
-    console.log("[ats_validator] no keywords to check — passing by default");
     return {
-      resumeVersion: { ...resumeVersion, atsScore: 100 },
+      resumeVersion: {
+        ...resumeVersion,
+        atsScore: state.atsCoverageScore ?? 0,
+      },
+      presentKeywords: [],
       missingKeywords: [],
-      atsRetryCount: (state.atsRetryCount || 0) + 1,
       currentNode: "ats_validator",
     };
   }
 
   const total = keywordsToCheck.length;
+
   const coverage = present.length / total;
   const atsScore = Math.round(coverage * 100);
 
@@ -82,6 +98,7 @@ export async function atsValidatorNode(state) {
       ...resumeVersion,
       atsScore,
     },
+    presentKeywords: present,
     missingKeywords: missing,
     atsRetryCount: retryCount,
     currentNode: "ats_validator",
@@ -92,13 +109,28 @@ export function shouldContinueAfterValidation(state) {
   const atsScore = state.resumeVersion?.atsScore ?? 0;
   const retryCount = state.atsRetryCount || 0;
 
-  if (atsScore >= 80 || retryCount >= 4) {
-    console.log(
-      `[ats_validator] score ${atsScore} — proceeding to pdf_builder`,
-    );
+  console.log("========== ATS VALIDATOR ==========");
+  console.log("ATS Score:", atsScore);
+  console.log("Retry Count:", retryCount);
+  console.log("Present:", state.presentKeywords?.length);
+  console.log("Missing:", state.missingKeywords?.length);
+  console.log("===================================");
+
+  if (!state.missingKeywords?.length && !state.presentKeywords?.length) {
+    console.log("[ats_validator] No keyword optimization possible.");
     return "pdf_builder";
   }
 
-  console.log(`[ats_validator] score ${atsScore} < 80 — looping back`);
+  if (retryCount >= 1) {
+    console.log("[ats_validator] Maximum retries reached.");
+    return "pdf_builder";
+  }
+
+  if (atsScore >= 80) {
+    console.log("[ats_validator] ATS target achieved.");
+    return "pdf_builder";
+  }
+
+  console.log("[ats_validator] Retrying keyword injection.");
   return "kw_injector";
 }

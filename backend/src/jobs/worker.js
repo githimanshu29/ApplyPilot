@@ -68,6 +68,12 @@ const worker = new Worker(
         },
       );
 
+      const application = await Application.findById(applicationId);
+
+      if (!application.resumeVersionId) {
+        throw new Error("Pipeline completed but application not updated");
+      }
+
       emit("pipeline:complete", {
         applicationId,
         fitScore: result.fitScore,

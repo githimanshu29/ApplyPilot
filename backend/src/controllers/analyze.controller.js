@@ -35,7 +35,8 @@ export const analyzeJD = async (req, res) => {
       portalUrl: portalUrl || "",
       portalType: portalType || "other",
       jdRaw,
-      status: "analysing",
+      status: "saved",
+      analysisStatus: "processing",
       timeline: [
         { event: "created", detail: "Application created via JD analysis" },
       ],

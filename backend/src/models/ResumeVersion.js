@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { string } from "zod";
 
 const resumeVersionSchema = new mongoose.Schema(
   {
@@ -41,7 +42,7 @@ const resumeVersionSchema = new mongoose.Schema(
         branch: String,
         college: String,
         cgpa: Number,
-        year: Number,
+        year: String,
       },
     },
 

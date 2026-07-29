@@ -93,7 +93,7 @@ export async function crmLoggerNode(state) {
     });
 
     //  3. Update Application
-    await Application.findByIdAndUpdate(
+    const updatedApplication = await Application.findByIdAndUpdate(
       applicationId,
       {
         jdAnalysisId: jdDoc._id,
@@ -107,6 +107,14 @@ export async function crmLoggerNode(state) {
       },
       { new: true },
     );
+
+    console.log("===== APPLICATION UPDATED =====");
+    console.log(updatedApplication);
+    console.log("===============================");
+
+    if (!updatedApplication) {
+      throw new Error(`Application ${applicationId} not found while updating`);
+    }
 
     console.log("[crm_logger] saved successfully");
 
@@ -125,10 +133,7 @@ export async function crmLoggerNode(state) {
 
     return { currentNode: "crm_logger" };
   } catch (err) {
-    console.error("[crm_logger] failed:", err.message);
-
-    return {
-      errors: [{ node: "crm_logger", message: err.message }],
-    };
+    console.error("[crm_logger] failed:", err);
+    throw err;
   }
 }

@@ -1,7 +1,7 @@
 import { Application } from "../models/Application.js";
 import { JDAnalysis } from "../models/JDAnalysis.js";
 import { ResumeVersion } from "../models/ResumeVersion.js";
-// import { PrepSession } from "../models/PrepSession.js";
+import { PrepSession } from "../models/PrepSession.js";
 
 // GET /api/applications
 // returns all applications for logged in user — grouped by status for kanban
