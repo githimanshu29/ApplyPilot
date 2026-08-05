@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { string } from "zod";
 
-const resumeVersionSchema = new mongoose.Schema(
+const workingResumeSchema = new mongoose.Schema(
   {
     applicationId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -74,6 +74,19 @@ const resumeVersionSchema = new mongoose.Schema(
       explanation: String,
     },
 
+    // recruiter simulation — computed by crm_logger after all pipeline outputs exist
+    // owned by workingResumebecause recruiters react to the tailored resume, not the raw JD
+    recruiterSimulation: {
+      wouldShortlist: Boolean,
+      confidence: { type: Number, min: 0, max: 100 },
+      strengths: [String],
+      weaknesses: [String],
+      hiringRisks: [String],
+      likelyQuestions: [String],
+      interviewProbability: { type: Number, min: 0, max: 100 },
+      reasoning: String,
+    },
+
     // PDF generated on demand from resumeJSON
     pdfUrl: String,
 
@@ -83,7 +96,7 @@ const resumeVersionSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-export const ResumeVersion = mongoose.model(
-  "ResumeVersion",
-  resumeVersionSchema,
+export const workingResume = mongoose.model(
+  "workingResume",
+  workingResumeSchema,
 );

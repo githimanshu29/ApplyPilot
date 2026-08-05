@@ -1,6 +1,6 @@
 import { Application } from "../models/Application.js";
 import { JDAnalysis } from "../models/JDAnalysis.js";
-import { ResumeVersion } from "../models/ResumeVersion.js";
+import { workingResume } from "../models/workingResume.js";
 import { PrepSession } from "../models/PrepSession.js";
 
 // GET /api/applications
@@ -70,12 +70,12 @@ export const getApplicationById = async (req, res) => {
     }
 
     // fetch related documents in parallel
-    const [jdAnalysis, resumeVersion, prepSession] = await Promise.all([
+    const [jdAnalysis, workingResume, prepSession] = await Promise.all([
       application.jdAnalysisId
         ? JDAnalysis.findById(application.jdAnalysisId).lean()
         : null,
-      application.resumeVersionId
-        ? ResumeVersion.findById(application.resumeVersionId).lean()
+      application.workingResumeId
+        ? workingResume.findById(application.workingResumeId).lean()
         : null,
       PrepSession.findOne({ applicationId: application._id }).lean(),
     ]);
@@ -89,7 +89,7 @@ export const getApplicationById = async (req, res) => {
       success: true,
       application,
       jdAnalysis,
-      resumeVersion,
+      workingResume,
       prepSession,
     });
   } catch (err) {

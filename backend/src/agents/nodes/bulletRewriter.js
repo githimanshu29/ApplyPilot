@@ -47,17 +47,17 @@ function sortByPriority(a, b) {
 export async function bulletRewriterNode(state) {
   console.log("[bullet_rewriter] starting...");
 
-  const resumeVersion = state.resumeVersion || {};
+  const workingResume = state.workingResume || {};
 
   const currentBullets =
-    resumeVersion.tailoredBullets && resumeVersion.tailoredBullets.length > 0
-      ? resumeVersion.tailoredBullets
+    workingResume.tailoredBullets && workingResume.tailoredBullets.length > 0
+      ? workingResume.tailoredBullets
       : state.userProfile?.bullets || [];
 
   if (!currentBullets.length) {
     return {
-      resumeVersion: {
-        ...resumeVersion,
+      workingResume: {
+        ...workingResume,
         tailoredBullets: [],
         qualityScore: 1,
       },
@@ -237,20 +237,29 @@ Do NOT introduce skills that are not present in candidate skills.
     }));
     const tailoredBullets = rewritten.map((r) => r.rewritten).filter(Boolean);
 
-    const qualityScore =
+    // normalize model output to 0-100
+    // models return either 0-1 or 0-10 — convert both to 0-100
+    const rawScore =
       rewritten.length > 0
         ? rewritten.reduce((sum, r) => sum + (r.qualityScore || 0.8), 0) /
           rewritten.length
         : 0;
 
+    const qualityScore =
+      rawScore <= 1
+        ? Math.round(rawScore * 100) // was 0-1 → scale to 0-100
+        : rawScore <= 10
+          ? Math.round(rawScore * 10) // was 0-10 → scale to 0-100
+          : Math.round(rawScore); // already 0-100
+
     console.log(`[bullet_rewriter] avg quality: ${qualityScore.toFixed(2)}`);
 
     return {
-      resumeVersion: {
-        ...resumeVersion,
+      workingResume: {
+        ...workingResume,
         originalBullets:
-          resumeVersion.originalBullets?.length > 0
-            ? resumeVersion.originalBullets
+          workingResume.originalBullets?.length > 0
+            ? workingResume.originalBullets
             : currentBullets,
         tailoredBullets,
         qualityScore,
@@ -261,10 +270,10 @@ Do NOT introduce skills that are not present in candidate skills.
     console.error("[bullet_rewriter] failed:", err.message);
     return {
       errors: [{ node: "bullet_rewriter", message: err.message }],
-      resumeVersion: {
-        ...resumeVersion,
-        tailoredBullets: resumeVersion.tailoredBullets?.length
-          ? resumeVersion.tailoredBullets
+      workingResume: {
+        ...workingResume,
+        tailoredBullets: workingResume.tailoredBullets?.length
+          ? workingResume.tailoredBullets
           : currentBullets,
         qualityScore: 1,
       },
@@ -273,10 +282,10 @@ Do NOT introduce skills that are not present in candidate skills.
 }
 
 export function shouldRetryBullets(state) {
-  const qualityScore = state.resumeVersion?.qualityScore ?? 1;
+  const qualityScore = state.workingResume?.qualityScore ?? 1;
   const retryCount = state.atsRetryCount || 0;
 
-  if (qualityScore < 0.85 && retryCount < 3) {
+  if (qualityScore < 85 && retryCount < 3) {
     console.log(
       `[bullet_rewriter] quality ${qualityScore.toFixed(2)} < 0.85 — retrying`,
     );

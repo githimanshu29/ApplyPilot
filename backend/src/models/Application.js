@@ -50,9 +50,9 @@ const applicationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "JDAnalysis",
     },
-    resumeVersionId: {
+    workingResumeId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "ResumeVersion",
+      ref: "workingResume",
     },
 
     notes: String, // user can add personal notes to any application

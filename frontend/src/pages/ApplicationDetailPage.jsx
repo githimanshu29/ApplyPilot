@@ -247,7 +247,7 @@ export default function ApplicationDetailPage() {
     );
   }
 
-  const { application, jdAnalysis, resumeVersion, prepSession } = data;
+  const { application, jdAnalysis, workingResume, prepSession } = data;
   const cfg = statusConfig[application.status] || statusConfig.saved;
 
   return (
@@ -311,10 +311,10 @@ export default function ApplicationDetailPage() {
               label="ATS coverage (original)"
               score={jdAnalysis.atsCoverageScore || 0}
             />
-            {resumeVersion?.atsScore !== undefined && (
+            {workingResume?.atsScore !== undefined && (
               <ScoreBar
                 label="ATS score (after tailoring)"
-                score={resumeVersion.atsScore}
+                score={workingResume.atsScore}
               />
             )}
           </div>
@@ -333,8 +333,8 @@ export default function ApplicationDetailPage() {
       )}
 
       {/* honest gap report */}
-      {resumeVersion?.honestGapReport && (
-        <HonestGapReport report={resumeVersion.honestGapReport} />
+      {workingResume?.honestGapReport && (
+        <HonestGapReport report={workingResume.honestGapReport} />
       )}
 
       {/* gap analysis */}
@@ -351,7 +351,7 @@ export default function ApplicationDetailPage() {
       )}
 
       {/* tailored resume */}
-      {resumeVersion?.tailoredBullets?.length > 0 && (
+      {workingResume?.tailoredBullets?.length > 0 && (
         <Card>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-[#e6edf3]">
@@ -359,27 +359,27 @@ export default function ApplicationDetailPage() {
             </h2>
             <span
               className={`text-xs px-2 py-0.5 rounded-md border ${
-                resumeVersion.atsScore >= 80
+                workingResume.atsScore >= 80
                   ? "bg-green-500/10 border-green-500/20 text-green-400"
                   : "bg-yellow-500/10 border-yellow-500/20 text-yellow-400"
               }`}
             >
-              ATS {resumeVersion.atsScore}%
+              ATS {workingResume.atsScore}%
             </span>
           </div>
           <BulletDiff
-            original={resumeVersion.originalBullets}
-            tailored={resumeVersion.tailoredBullets}
+            original={workingResume.originalBullets}
+            tailored={workingResume.tailoredBullets}
           />
 
           {/* updated skills */}
-          {resumeVersion.updatedSkills?.length > 0 && (
+          {workingResume.updatedSkills?.length > 0 && (
             <div className="mt-4 pt-4 border-t border-[#21262d]">
               <p className="text-xs font-semibold text-[#8b949e] uppercase tracking-wide mb-2">
                 Updated skills section
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {resumeVersion.updatedSkills.map((skill) => (
+                {workingResume.updatedSkills.map((skill) => (
                   <span
                     key={skill}
                     className="px-2.5 py-1 rounded-lg text-xs bg-blue-500/10 border border-blue-500/20 text-blue-400"
@@ -392,13 +392,13 @@ export default function ApplicationDetailPage() {
           )}
 
           {/* summary */}
-          {resumeVersion.resumeJSON?.summary && (
+          {workingResume.resumeJSON?.summary && (
             <div className="mt-4 pt-4 border-t border-[#21262d]">
               <p className="text-xs font-semibold text-[#8b949e] uppercase tracking-wide mb-2">
                 Professional summary
               </p>
               <p className="text-xs text-[#8b949e] leading-relaxed italic">
-                "{resumeVersion.resumeJSON.summary}"
+                "{workingResume.resumeJSON.summary}"
               </p>
             </div>
           )}

@@ -4,9 +4,10 @@ import redis from "../lib/redis.js";
 import connectDB from "../lib/db.js";
 import { getGraph } from "../agents/graph.js";
 import { Application } from "../models/Application.js";
+
 import { JDAnalysis } from "../models/JDAnalysis.js";
-import { ResumeVersion } from "../models/ResumeVersion.js";
 import { User } from "../models/User.js";
+import { workingResume } from "../models/workingResume.js";
 
 await connectDB();
 
@@ -70,14 +71,14 @@ const worker = new Worker(
 
       const application = await Application.findById(applicationId);
 
-      if (!application.resumeVersionId) {
+      if (!application.workingResumeId) {
         throw new Error("Pipeline completed but application not updated");
       }
 
       emit("pipeline:complete", {
         applicationId,
         fitScore: result.fitScore,
-        atsScore: result.resumeVersion?.atsScore,
+        atsScore: result.workingResume?.atsScore,
         honestGapReport: result.honestGapReport,
       });
 

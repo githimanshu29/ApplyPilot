@@ -20,7 +20,7 @@ function isKeywordPresent(keyword, text) {
 export async function atsValidatorNode(state) {
   console.log("[ats_validator] starting...");
 
-  const resumeVersion = state.resumeVersion || {};
+  const workingResume = state.workingResume || {};
 
   // Unified keyword source (aligned with pipeline)
   const atsKeywords = state.jdAnalysis?.atsKeywords;
@@ -41,10 +41,10 @@ export async function atsValidatorNode(state) {
 
   // Resume text
   const tailoredText = [
-    resumeVersion.resumeJSON?.summary || "",
-    ...(resumeVersion.updatedSkills || []),
-    ...(resumeVersion.tailoredBullets || []),
-    ...(resumeVersion.resumeJSON?.experience?.flatMap((e) => e.bullets || []) ||
+    workingResume.resumeJSON?.summary || "",
+    ...(workingResume.updatedSkills || []),
+    ...(workingResume.tailoredBullets || []),
+    ...(workingResume.resumeJSON?.experience?.flatMap((e) => e.bullets || []) ||
       []),
   ]
     .join(" ")
@@ -72,8 +72,8 @@ export async function atsValidatorNode(state) {
   // this happens when jd_parser found no ats keywords — not the user's fault
   if (keywordsToCheck.length === 0) {
     return {
-      resumeVersion: {
-        ...resumeVersion,
+      workingResume: {
+        ...workingResume,
         atsScore: state.atsCoverageScore ?? 0,
       },
       presentKeywords: [],
@@ -94,8 +94,8 @@ export async function atsValidatorNode(state) {
   );
 
   return {
-    resumeVersion: {
-      ...resumeVersion,
+    workingResume: {
+      ...workingResume,
       atsScore,
     },
     presentKeywords: present,
@@ -106,7 +106,7 @@ export async function atsValidatorNode(state) {
 }
 
 export function shouldContinueAfterValidation(state) {
-  const atsScore = state.resumeVersion?.atsScore ?? 0;
+  const atsScore = state.workingResume?.atsScore ?? 0;
   const retryCount = state.atsRetryCount || 0;
 
   console.log("========== ATS VALIDATOR ==========");

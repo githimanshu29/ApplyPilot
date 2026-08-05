@@ -15,14 +15,14 @@
 export async function pdfBuilderNode(state) {
   console.log("[pdf_builder] building structured resumeJSON");
 
-  const { resumeVersion, userProfile } = state;
+  const { workingResume, userProfile } = state;
 
   const baseExperience = userProfile.experience || [];
 
   // CASE 1: future-ready (per-experience bullets exist)
-  if (resumeVersion.tailoredExperienceBullets?.length) {
+  if (workingResume.tailoredExperienceBullets?.length) {
     const experience = baseExperience.map((exp) => {
-      const match = resumeVersion.tailoredExperienceBullets.find(
+      const match = workingResume.tailoredExperienceBullets.find(
         (e) => e.company === exp.company || e.role === exp.role,
       );
 
@@ -36,8 +36,8 @@ export async function pdfBuilderNode(state) {
   }
 
   // CASE 2: current system (flat bullets → distribute)
-  if (resumeVersion.tailoredBullets?.length) {
-    const allBullets = resumeVersion.tailoredBullets;
+  if (workingResume.tailoredBullets?.length) {
+    const allBullets = workingResume.tailoredBullets;
 
     const bulletsPerExp = Math.ceil(
       allBullets.length / (baseExperience.length || 1),
@@ -64,13 +64,13 @@ export async function pdfBuilderNode(state) {
 
 // helper to keep logic clean and consistent
 function buildResponse(state, experience) {
-  const { resumeVersion, userProfile } = state;
+  const { workingResume, userProfile } = state;
 
   const resumeJSON = {
-    summary: resumeVersion.summary || "",
+    summary: workingResume.summary || "",
 
-    skills: resumeVersion.updatedSkills?.length
-      ? resumeVersion.updatedSkills
+    skills: workingResume.updatedSkills?.length
+      ? workingResume.updatedSkills
       : userProfile.skills || [],
 
     experience,
@@ -80,8 +80,8 @@ function buildResponse(state, experience) {
   };
 
   return {
-    resumeVersion: {
-      ...resumeVersion,
+    workingResume: {
+      ...workingResume,
       resumeJSON,
     },
     currentNode: "pdf_builder",

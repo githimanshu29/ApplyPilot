@@ -123,7 +123,7 @@ function classifyKeywords(keywords, userProfile) {
 export async function kwInjectorNode(state) {
   console.log("[kw_injector] starting...");
 
-  const resumeVersion = state.resumeVersion || {};
+  const workingResume = state.workingResume || {};
   const gapPriority = (state.tailorPriority || []).map(normalizeKeyword);
   const atsMissing = (state.missingKeywords || []).map(normalizeKeyword);
   const allKeywords = [...new Set([...gapPriority, ...atsMissing])];
@@ -131,18 +131,39 @@ export async function kwInjectorNode(state) {
   if (!allKeywords.length) {
     console.log("[kw_injector] nothing to process");
     return {
-      resumeVersion: { ...resumeVersion, injectedKeywords: [] },
+      workingResume: { ...workingResume, injectedKeywords: [] },
       currentNode: "kw_injector",
     };
   }
 
   // ── honesty gate ──────────────────────────────────────
-  const { present, inferable, trulyMissing } = classifyKeywords(
-    allKeywords,
-    state.userProfile,
-  );
+  // atsScanner already classified keywords into 3 buckets in state
+  // use that result directly — no need to recompute
+  const alreadyPresent = state.presentKeywords || [];
+  const alreadyInferable = state.inferableKeywords || [];
 
-  const safeToInject = [...present, ...inferable];
+  // safeToInject = what atsScanner found as present or inferable
+  // these are the only keywords we can honestly add to the resume
+  const safeToInject = [
+    ...new Set([
+      ...alreadyPresent.map((k) => (typeof k === "string" ? k : k.keyword)),
+      ...alreadyInferable,
+      // also include any from tailorPriority that ats already classified as safe
+      ...gapPriority.filter(
+        (kw) =>
+          alreadyPresent.some(
+            (pk) =>
+              (typeof pk === "string" ? pk : pk.keyword).toLowerCase() ===
+              kw.toLowerCase(),
+          ) ||
+          alreadyInferable.some((ik) => ik.toLowerCase() === kw.toLowerCase()),
+      ),
+    ]),
+  ];
+
+  const trulyMissing = allKeywords.filter(
+    (kw) => !safeToInject.some((s) => s.toLowerCase() === kw.toLowerCase()),
+  );
 
   console.log(
     `[kw_injector] present: ${present.length}, inferable: ${inferable.length}, truly missing: ${trulyMissing.length}`,
@@ -161,9 +182,9 @@ export async function kwInjectorNode(state) {
   if (!safeToInject.length) {
     console.log("[kw_injector] nothing honest to inject — skipping");
     return {
-      resumeVersion: { ...resumeVersion, injectedKeywords: [] },
+      workingResume: { ...workingResume, injectedKeywords: [] },
       honestGapReport: {
-        bestAchievableScore: resumeVersion.atsScore || 0,
+        bestAchievableScore: workingResume.atsScore || 0,
         trulyMissingSkills: trulyMissing,
         explanation:
           `These skills are required but not present in your profile: ${trulyMissing.join(", ")}. ` +
@@ -229,8 +250,8 @@ Return structured output only.`;
         : null;
 
     return {
-      resumeVersion: {
-        ...resumeVersion,
+      workingResume: {
+        ...workingResume,
         updatedSkills: result.updatedSkills || currentSkills,
         injectedKeywords: result.injectedKeywords || [],
         summary: result.summary || "",
@@ -242,8 +263,8 @@ Return structured output only.`;
     console.error("[kw_injector] failed:", err.message);
     return {
       errors: [{ node: "kw_injector", message: err.message }],
-      resumeVersion: {
-        ...resumeVersion,
+      workingResume: {
+        ...workingResume,
         injectedKeywords: [],
       },
     };

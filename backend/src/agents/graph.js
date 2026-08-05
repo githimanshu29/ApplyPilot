@@ -16,7 +16,7 @@ import {
 import { pdfBuilderNode } from "./nodes/pdfBuilder.js";
 import { crmLoggerNode } from "./nodes/crmLogger.js";
 import { interviewPrepNode } from "./nodes/interviewPrep.js";
-
+import { evidenceMapperNode } from "./nodes/evidenceMapper.js";
 let compiledGraph = null;
 
 export function getGraph() {
@@ -29,6 +29,7 @@ export function getGraph() {
   graph.addNode("fit_scorer", fitScorerNode);
   graph.addNode("ats_scanner", atsScannerNode);
   graph.addNode("gap_analyzer", gapAnalyzerNode);
+  graph.addNode("evidence_mapper", evidenceMapperNode);
   graph.addNode("bullet_rewriter", bulletRewriterNode);
   graph.addNode("kw_injector", kwInjectorNode);
   graph.addNode("ats_validator", atsValidatorNode);
@@ -47,7 +48,9 @@ export function getGraph() {
   graph.addEdge("ats_scanner", "gap_analyzer");
 
   // bullet quality loop
-  graph.addEdge("gap_analyzer", "bullet_rewriter");
+  // replace with these two
+  graph.addEdge("gap_analyzer", "evidence_mapper");
+  graph.addEdge("evidence_mapper", "bullet_rewriter");
   graph.addConditionalEdges("bullet_rewriter", shouldRetryBullets);
 
   // ATS score loop
@@ -55,9 +58,9 @@ export function getGraph() {
   graph.addConditionalEdges("ats_validator", shouldContinueAfterValidation);
 
   // terminal
- graph.addEdge("pdf_builder", "crm_logger");
-graph.addEdge("crm_logger", "interview_prep");
-graph.addEdge("interview_prep", END);
+  graph.addEdge("pdf_builder", "crm_logger");
+  graph.addEdge("crm_logger", "interview_prep");
+  graph.addEdge("interview_prep", END);
 
   compiledGraph = graph.compile();
   return compiledGraph;

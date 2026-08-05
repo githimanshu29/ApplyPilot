@@ -83,9 +83,40 @@ const jdAnalysisSchema = new mongoose.Schema(
     },
 
     // gap_analyzer output
+    // gap_analyzer output
     gapAnalysis: [gapItemSchema],
     tailorPriority: [String],
     gapInsights: [String],
+
+    // merged keyword intelligence — all 5 buckets
+    // populated by crm_logger from atsScanner + kwInjector outputs
+    keywordIntelligence: {
+      matched: [{ keyword: String, source: String, _id: false }],
+      inferable: [{ keyword: String, reason: String, _id: false }],
+      missing: [{ keyword: String, priority: String, _id: false }],
+      injected: [{ keyword: String, _id: false }],
+      rejected: [{ keyword: String, reason: String, _id: false }],
+    },
+
+    // evidence_mapper output
+    evidenceMap: [
+      {
+        requirement: String,
+        skillOrTool: String,
+        importance: {
+          type: String,
+          enum: ["critical", "high", "medium", "low"],
+        },
+        verifiedAs: {
+          type: String,
+          enum: ["verified", "inferred", "not_found"],
+        },
+        evidence: String,
+        source: String,
+        confidence: { type: Number, min: 0, max: 100 },
+        _id: false,
+      },
+    ],
   },
   { timestamps: true },
 );
